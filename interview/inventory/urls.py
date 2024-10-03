@@ -1,6 +1,6 @@
 
 from django.urls import path
-from interview.inventory.views import InventoryLanguageListCreateView, InventoryLanguageRetrieveUpdateDestroyView, InventoryListCreateView, InventoryRetrieveUpdateDestroyView, InventoryTagListCreateView, InventoryTagRetrieveUpdateDestroyView, InventoryTypeListCreateView, InventoryTypeRetrieveUpdateDestroyView
+from interview.inventory.views import InventoryLanguageListCreateView, InventoryLanguageRetrieveUpdateDestroyView, InventoryListCreateView, InventoryRetrieveUpdateDestroyView, InventoryTagListCreateView, InventoryTagRetrieveUpdateDestroyView, InventoryTypeListCreateView, InventoryTypeRetrieveUpdateDestroyView, InventoryListAfterDateView
 from interview.order.views import OrderListCreateView, OrderTagListCreateView
 
 
@@ -13,4 +13,5 @@ urlpatterns = [
     path('tags/', InventoryTagListCreateView.as_view(), name='inventory-tags-list'),
     path('types/', InventoryTypeListCreateView.as_view(), name='inventory-types-list'),
     path('', InventoryListCreateView.as_view(), name='inventory-list'),
+    path('created-after/', InventoryListAfterDateView.as_view(), name='inventory-created-after'),
 ]
