@@ -1,6 +1,8 @@
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.views import APIView
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from interview.inventory.models import Inventory, InventoryLanguage, InventoryTag, InventoryType
 from interview.inventory.schemas import InventoryMetaData
@@ -219,3 +221,26 @@ class InventoryTypeRetrieveUpdateDestroyView(APIView):
     
     def get_queryset(self, **kwargs):
         return self.queryset.get(**kwargs)
+    
+class InventoryListAfterDateView(APIView):
+    serializer_class = InventorySerializer
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        date_str = request.query_params.get('created_after')
+        if not date_str:
+            return Response({'error': 'The "created_after" query parameter is required.'}, status=400)
+        
+        try:
+            created_after_date = parse_date(date_str)
+            if not created_after_date:
+                raise ValueError
+            # Convert date to datetime for comparison
+            created_after_datetime = timezone.make_aware(
+                datetime.datetime.combine(created_after_date, datetime.time.min)
+            )
+        except ValueError:
+            return Response({'error': 'Invalid date format for "created_after". Use YYYY-MM-DD.'}, status=400)
+
+        inventories = Inventory.objects.filter(created_at__gt=created_after_datetime)
+        serializer = self.serializer_class(inventories, many=True)
+        return Response(serializer.data, status=200)

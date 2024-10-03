@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from interview.inventory.serializers import InventorySerializer
-
 from interview.order.models import Order, OrderTag
 
 
@@ -18,3 +17,9 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ['id', 'inventory', 'start_date', 'embargo_date', 'tags', 'is_active']
+
+class OrderDeactivateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ['id', 'is_active']
+        read_only_fields = ['id']
