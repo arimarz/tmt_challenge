@@ -3,38 +3,41 @@ from rest_framework.request import Request
 from rest_framework.views import APIView
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from rest_framework.generics import ListCreateAPIView
+from rest_framework.pagination import LimitOffsetPagination
 
 from interview.inventory.models import Inventory, InventoryLanguage, InventoryTag, InventoryType
 from interview.inventory.schemas import InventoryMetaData
 from interview.inventory.serializers import InventoryLanguageSerializer, InventorySerializer, InventoryTagSerializer, InventoryTypeSerializer
 
+class InventoryLimitOffsetPagination(LimitOffsetPagination):
+    """
+    Custom pagination class that limits the number of inventory items per page.
+    """
+    default_limit = 3  # Default items per page
+    max_limit = 100    # Maximum items per page
 
-class InventoryListCreateView(APIView):
+class InventoryListCreateView(ListCreateAPIView):
+    """
+    API view to list and create inventory items, with pagination support.
+    """
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
-    
+    pagination_class = InventoryLimitOffsetPagination
+
     def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Handle POST requests to create a new inventory item.
+        """
+        # Validate and parse the 'metadata' field
         try:
             metadata = InventoryMetaData(**request.data['metadata'])
         except Exception as e:
             return Response({'error': str(e)}, status=400)
         
         request.data['metadata'] = metadata.dict()
-        serializer = self.serializer_class(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
-        
-        serializer.save()
-        
-        return Response(serializer.data, status=201)
-    
-    def get(self, request: Request, *args, **kwargs) -> Response:
-        serializer = self.serializer_class(self.get_queryset(), many=True)
-        
-        return Response(serializer.data, status=200)
-    
-    def get_queryset(self):
-        return self.queryset.all()
+        # Use the superclass method to handle object creation
+        return super().post(request, *args, **kwargs)
     
 
 class InventoryRetrieveUpdateDestroyView(APIView):
@@ -244,3 +247,4 @@ class InventoryListAfterDateView(APIView):
         inventories = Inventory.objects.filter(created_at__gt=created_after_datetime)
         serializer = self.serializer_class(inventories, many=True)
         return Response(serializer.data, status=200)
+    
