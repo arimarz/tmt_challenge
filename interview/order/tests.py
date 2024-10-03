@@ -168,3 +168,57 @@ class OrderTagsListViewTest(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['detail'], 'Order not found.')
+
+class OrdersByTagViewTest(TestCase):
+    """Tests for the OrdersByTagView."""
+
+    def setUp(self):
+        self.client = APIClient()
+        # Create inventory dependencies
+        self.inventory_type = InventoryType.objects.create(name='Type1')
+        self.inventory_language = InventoryLanguage.objects.create(name='English')
+        self.inventory = Inventory.objects.create(
+            name='Inventory Item',
+            type=self.inventory_type,
+            language=self.inventory_language,
+            metadata={}
+        )
+
+        # Create order tags
+        self.tag1 = OrderTag.objects.create(name='Tag1', is_active=True)
+        self.tag2 = OrderTag.objects.create(name='Tag2', is_active=True)
+
+        # Create orders and associate tags
+        self.order1 = Order.objects.create(
+            inventory=self.inventory,
+            start_date=timezone.now().date(),
+            embargo_date=(timezone.now() + datetime.timedelta(days=5)).date(),
+            is_active=True
+        )
+        self.order1.tags.add(self.tag1)
+
+        self.order2 = Order.objects.create(
+            inventory=self.inventory,
+            start_date=timezone.now().date(),
+            embargo_date=(timezone.now() + datetime.timedelta(days=10)).date(),
+            is_active=True
+        )
+        self.order2.tags.add(self.tag1, self.tag2)
+
+        self.url = reverse('orders-by-tag', kwargs={'tag_id': self.tag1.id})
+
+    def test_list_orders_associated_with_tag(self):
+        """Test listing orders associated with a tag."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        order_ids = [order['id'] for order in response.data]
+        self.assertIn(self.order1.id, order_ids)
+        self.assertIn(self.order2.id, order_ids)
+
+    def test_tag_not_found(self):
+        """Test that a 404 is returned if the tag does not exist."""
+        url = reverse('orders-by-tag', kwargs={'tag_id': 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'], 'Tag not found.')

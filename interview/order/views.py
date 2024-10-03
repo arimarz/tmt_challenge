@@ -84,3 +84,18 @@ class OrderTagsListView(generics.ListAPIView):
             raise NotFound('Order not found.')
 
         return order.tags.all()
+    
+class OrdersByTagView(generics.ListAPIView):
+    """
+    API view to list all orders associated with a particular tag.
+    """
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        tag_id = self.kwargs.get('tag_id')
+        try:
+            tag = OrderTag.objects.get(pk=tag_id)
+        except OrderTag.DoesNotExist:
+            raise NotFound('Tag not found.')
+
+        return tag.orders.all()
