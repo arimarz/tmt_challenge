@@ -121,3 +121,50 @@ class OrderListByDateViewTest(TestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
+
+class OrderTagsListViewTest(TestCase):
+    """Tests for the OrderTagsListView."""
+
+    def setUp(self):
+        self.client = APIClient()
+        # Create inventory dependencies
+        self.inventory_type = InventoryType.objects.create(name='Type1')
+        self.inventory_language = InventoryLanguage.objects.create(name='English')
+        self.inventory = Inventory.objects.create(
+            name='Inventory Item',
+            type=self.inventory_type,
+            language=self.inventory_language,
+            metadata={}
+        )
+
+        # Create order tags
+        self.tag1 = OrderTag.objects.create(name='Tag1', is_active=True)
+        self.tag2 = OrderTag.objects.create(name='Tag2', is_active=True)
+        self.tag3 = OrderTag.objects.create(name='Tag3', is_active=True)
+
+        # Create an order and associate tags
+        self.order = Order.objects.create(
+            inventory=self.inventory,
+            start_date=timezone.now().date(),
+            embargo_date=(timezone.now() + datetime.timedelta(days=5)).date(),
+            is_active=True
+        )
+        self.order.tags.add(self.tag1, self.tag2)
+
+        self.url = reverse('order-tags', kwargs={'pk': self.order.pk})
+
+    def test_list_tags_associated_with_order(self):
+        """Test listing tags associated with an order."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        tag_names = [tag['name'] for tag in response.data]
+        self.assertIn(self.tag1.name, tag_names)
+        self.assertIn(self.tag2.name, tag_names)
+
+    def test_order_not_found(self):
+        """Test that a 404 is returned if the order does not exist."""
+        url = reverse('order-tags', kwargs={'pk': 9999})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['detail'], 'Order not found.')

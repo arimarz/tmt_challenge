@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from django.utils.dateparse import parse_date
 
 from interview.order.models import Order, OrderTag
@@ -69,3 +69,18 @@ class OrderListByDateView(generics.ListAPIView):
             start_date__gte=start_date,
             embargo_date__lte=embargo_date
         )
+
+class OrderTagsListView(generics.ListAPIView):
+    """
+    API view to list all tags associated with an order.
+    """
+    serializer_class = OrderTagSerializer
+
+    def get_queryset(self):
+        order_id = self.kwargs.get('pk')
+        try:
+            order = Order.objects.get(pk=order_id)
+        except Order.DoesNotExist:
+            raise NotFound('Order not found.')
+
+        return order.tags.all()
